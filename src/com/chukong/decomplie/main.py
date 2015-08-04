@@ -12,9 +12,8 @@ import shutil
 import re
 import xml.etree.ElementTree as ET
 currentpath = "/Volumes/Macintosh_HD_E/decompile"
-cputype = "armeabi"
-orientation = "port"
 
+orientation = "port"
 
 oprators = {}
 
@@ -276,6 +275,21 @@ def decompileapk(apkpath, output):
     cpapkzip = zipfile.ZipFile(tmp_apk, 'a')
     payapkzip = zipfile.ZipFile(currentpath + "/CocosPaySdk.apk")
     cpapkrawzip = zipfile.ZipFile(apkpath)
+    has_armeabi = False
+    has_armeabi_v7a = False
+    has_x86 = False
+    
+    for name in cpapkrawzip.namelist():
+        if str(name).startswith("lib/armeabi/"):
+            has_armeabi = True
+        elif str(name).startswith("lib/armeabi-v7a/"):
+            has_armeabi_v7a = True
+        elif str(name).startswith("lib/x86/"):
+            has_x86 = True
+        else:
+            continue
+    if (not has_armeabi) and (not has_armeabi_v7a) and (not has_x86):
+        has_armeabi = True   
     for name in payapkzip.namelist():
         if str(name).startswith("AndroidManifest.xml"):
             continue
@@ -289,18 +303,14 @@ def decompileapk(apkpath, output):
         if str(name).startswith("resources.arsc"):
             continue
         if str(name).startswith("lib/"):
-            if (cputype == "armeabi"):
-                if str(name).startswith("lib/armeabi-v7a/") or str(name).startswith("lib/x86/"):
-                    continue
-            elif (cputype == "armeabi-v7a"):
-                if str(name).startswith("lib/armeabi/") or str(name).startswith("lib/x86/"):    
-                    continue
-            elif (cputype == "x86"):
-                if str(name).startswith("lib/armeabi/") or str(name).startswith("lib/armeabi-v7a/"):
-                    continue   
-            elif (cputype == "armeabi-both"):
-                if str(name).startswith("lib/x86/"):
-                    continue                    
+            if str(name).startswith("lib/armeabi-v7a/") and has_armeabi_v7a :
+                    pass
+            elif str(name).startswith("lib/armeabi/") and has_armeabi:    
+                    pass
+            elif str(name).startswith("lib/x86/") and has_x86:
+                    pass
+            else:
+                continue                                
         data = payapkzip.read(name)
         cpapkzip.writestr(name, data)
         print name
@@ -329,7 +339,10 @@ def decompileapk(apkpath, output):
     release_path =  os.path.join(currentpath, "realeaseversion")
     if not os.path.exists(release_path):
         os.mkdir(release_path)
-    apk_output_release = os.path.join(release_path, output)
+    if str(output).endswith("apk"):
+        apk_output_release = os.path.join(release_path, output)
+    else:
+        apk_output_release = os.path.join(output, apkname)        
     resign(tmp_apk, apk_output_release)
     deletetempfile()
 
